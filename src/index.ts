@@ -1,7 +1,6 @@
 import express from 'express';
 import { SerialPort } from 'serialport';
 
-// Define types
 interface SerialResponse {
   success: boolean;
   message: string;
@@ -14,8 +13,8 @@ class DeviceController {
   constructor(portPath: string) {
     this.port = new SerialPort({
       path: portPath,
-      baudRate: 9600,
-      autoOpen: false
+      baudRate: 115200,
+      autoOpen: true
     });
 
     this.setupPortListeners();
@@ -55,14 +54,14 @@ class DeviceController {
     });
   }
 
-  private sendCommand(command: string): Promise<SerialResponse> {
+  public sendCommand(command: string): Promise<SerialResponse> {
     return new Promise((resolve, reject) => {
       if (!this.isConnected) {
         reject({ success: false, message: 'Device not connected' });
         return;
       }
 
-      this.port.write(`${command}\n`, (err: Error | null | undefined) => {
+      this.port.write(`${command}`, (err: Error | null | undefined) => {
         if (err !== null && err !== undefined) {
           reject({ success: false, message: `Failed to send command: ${err.message}` });
           return;
@@ -71,37 +70,48 @@ class DeviceController {
       });
     });
   }
-
-  public async open(): Promise<SerialResponse> {
-    return this.sendCommand('OPEN');
-  }
-
-  public async close(): Promise<SerialResponse> {
-    return this.sendCommand('CLOSE');
-  }
-
-  public async sort(): Promise<SerialResponse> {
-    return this.sendCommand('SORT');
-  }
 }
 
-// Create Express application
 const app = express();
 const port = 3000;
 
-// Create device controller instance
-// Note: Replace '/dev/ttyUSB0' with your actual serial port
-const device = new DeviceController('/dev/ttyUSB0');
+const device = new DeviceController('/dev/ttyACM0');
 
-// Connect to the device when the server starts
 device.connect().catch((err) => {
   console.error('Failed to connect to device:', err);
 });
 
-// Define API routes
+app.get('/plastic', async (_req, res) => {
+  try {
+    const result = await device.sendCommand('1');
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: (error as Error).message });
+  }
+});
+
+app.get('/metal', async (_req, res) => {
+  try {
+    const result = await device.sendCommand('2');
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: (error as Error).message });
+  }
+});
+
+app.get('/other', async (_req, res) => {
+  try {
+    const result = await device.sendCommand('3');
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: (error as Error).message });
+  }
+});
+
+
 app.get('/open', async (_req, res) => {
   try {
-    const result = await device.open();
+    const result = await device.sendCommand('4');
     res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, message: (error as Error).message });
@@ -110,23 +120,13 @@ app.get('/open', async (_req, res) => {
 
 app.get('/close', async (_req, res) => {
   try {
-    const result = await device.close();
+    const result = await device.sendCommand('5');
     res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, message: (error as Error).message });
   }
 });
 
-app.get('/sort', async (_req, res) => {
-  try {
-    const result = await device.sort();
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ success: false, message: (error as Error).message });
-  }
-});
-
-// Start the server
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
