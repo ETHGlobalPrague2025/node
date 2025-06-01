@@ -12,7 +12,7 @@ const recyclingSystemAbi = [
 ];
 
 const CONTRACT_CONFIG = {
-  address: '0x0EFafca24E5BbC1C01587B659226B9d600fd671f',
+  address: '0x66FBB0A1F1bb4A20bA47DB62eCF95c6BB1Dc9B42',
   rpcUrl: 'https://testnet.evm.nodes.onflow.org'
 };
 
