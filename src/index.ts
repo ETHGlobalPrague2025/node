@@ -22,7 +22,7 @@ class BlockchainListener {
   private deviceController: DeviceController;
   private lastBlockChecked: number;
   private pollingInterval: NodeJS.Timeout | null = null;
-  private readonly POLLING_INTERVAL_MS = 15000; // 15 seconds
+  private readonly POLLING_INTERVAL_MS = 5000; // 5 seconds
 
   constructor(deviceController: DeviceController) {
     this.deviceController = deviceController;
