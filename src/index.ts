@@ -1,6 +1,7 @@
 import express from 'express';
 import { SerialPort } from 'serialport';
 import { ethers } from 'ethers';
+import path from 'path';
 
 interface SerialResponse {
   success: boolean;
@@ -190,6 +191,14 @@ class DeviceController {
 
 const app = express();
 const port = 3000;
+
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Serve the index.html file at the root URL
+app.get('/', (_req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
 
 const device = new DeviceController('/dev/ttyACM0');
 
