@@ -2,6 +2,7 @@ import express from 'express';
 import { SerialPort } from 'serialport';
 import { ethers } from 'ethers';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 interface SerialResponse {
   success: boolean;
@@ -191,6 +192,10 @@ class DeviceController {
 
 const app = express();
 const port = 3000;
+
+// Get the directory path in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, '../public')));
