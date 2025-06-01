@@ -225,7 +225,7 @@ app.get('/other', async (_req, res) => {
 });
 
 
-app.get('/open', async (_req, res) => {
+app.get('/open_door', async (_req, res) => {
   try {
     const result = await device.sendCommand('4');
     res.json(result);
@@ -234,7 +234,7 @@ app.get('/open', async (_req, res) => {
   }
 });
 
-app.get('/close', async (_req, res) => {
+app.get('/close_door', async (_req, res) => {
   try {
     const result = await device.sendCommand('5');
     res.json(result);
