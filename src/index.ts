@@ -124,31 +124,106 @@ class BlockchainListener {
   }
 }
 
+import fs from 'fs';
+
 class DeviceController {
-  private port: SerialPort;
+  private port: SerialPort | null = null;
   private isConnected: boolean = false;
   private portPath: string;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private reconnectAttempts: number = 0;
-  private readonly MAX_RECONNECT_ATTEMPTS = 10;
+  private readonly MAX_RECONNECT_ATTEMPTS = Infinity; // Never give up trying to reconnect
   private readonly INITIAL_RECONNECT_DELAY = 1000; // 1 second
   private readonly MAX_RECONNECT_DELAY = 30000; // 30 seconds
   private commandQueue: Array<{command: string, resolve: (value: SerialResponse) => void, reject: (reason: SerialResponse) => void}> = [];
+  private deviceCheckInterval: NodeJS.Timeout | null = null;
+  private readonly DEVICE_CHECK_INTERVAL_MS = 5000; // 5 seconds
 
   constructor(portPath: string) {
     this.portPath = portPath;
-    this.port = new SerialPort({
-      path: portPath,
-      baudRate: 115200,
-      autoOpen: true
-    });
-
-    this.setupPortListeners();
+    
+    // Start checking for device availability
+    this.startDeviceCheck();
+    
+    // Initial connection attempt
+    this.initializePort();
+  }
+  
+  private initializePort(): void {
+    // Check if device exists before creating SerialPort
+    if (this.deviceExists()) {
+      console.log(`Device ${this.portPath} exists, initializing port...`);
+      try {
+        this.port = new SerialPort({
+          path: this.portPath,
+          baudRate: 115200,
+          autoOpen: false // Don't auto-open, we'll handle it manually
+        });
+        
+        this.setupPortListeners();
+        
+        // Try to open the port
+        this.connect().catch(err => {
+          console.error('Failed to connect to device during initialization:', err);
+        });
+      } catch (err) {
+        console.error(`Error initializing SerialPort: ${err}`);
+        this.startReconnection();
+      }
+    } else {
+      console.log(`Device ${this.portPath} does not exist, waiting for it to become available...`);
+      this.startReconnection();
+    }
+  }
+  
+  private deviceExists(): boolean {
+    try {
+      // Check if the device file exists
+      return fs.existsSync(this.portPath);
+    } catch (err) {
+      console.error(`Error checking if device exists: ${err}`);
+      return false;
+    }
+  }
+  
+  private startDeviceCheck(): void {
+    // Clear any existing interval
+    if (this.deviceCheckInterval !== null) {
+      clearInterval(this.deviceCheckInterval);
+    }
+    
+    // Set up interval to periodically check for device
+    this.deviceCheckInterval = setInterval(() => {
+      const deviceExists = this.deviceExists();
+      
+      if (deviceExists && !this.isConnected && this.reconnectTimer === null) {
+        console.log(`Device ${this.portPath} detected, attempting connection...`);
+        this.startReconnection();
+      } else if (!deviceExists && this.isConnected) {
+        console.log(`Device ${this.portPath} no longer exists but we're connected. This is unexpected.`);
+        // Force disconnect to trigger reconnection
+        if (this.port && this.port.isOpen) {
+          this.port.close(err => {
+            if (err) {
+              console.error(`Error closing port: ${err}`);
+            }
+          });
+        }
+      }
+    }, this.DEVICE_CHECK_INTERVAL_MS);
   }
 
   private setupPortListeners(): void {
+    if (!this.port) {
+      console.error('Cannot set up listeners: port is null');
+      return;
+    }
+    
+    // Remove any existing listeners to prevent duplicates
+    this.port.removeAllListeners();
+    
     this.port.on('open', () => {
-      console.log('Serial port opened');
+      console.log(`Serial port ${this.portPath} opened successfully`);
       this.isConnected = true;
       this.reconnectAttempts = 0;
       
@@ -157,7 +232,7 @@ class DeviceController {
     });
 
     this.port.on('error', (err) => {
-      console.error('Serial port error:', err);
+      console.error(`Serial port error on ${this.portPath}:`, err);
       this.isConnected = false;
       
       // Start reconnection process if not already started
@@ -165,7 +240,7 @@ class DeviceController {
     });
 
     this.port.on('close', () => {
-      console.log('Serial port closed');
+      console.log(`Serial port ${this.portPath} closed`);
       this.isConnected = false;
       
       // Start reconnection process if not already started
@@ -275,6 +350,11 @@ class DeviceController {
         return;
       }
 
+      if (!this.port) {
+        reject({ success: false, message: 'Port is not initialized' });
+        return;
+      }
+
       // Reset reconnection attempts when manually connecting
       this.reconnectAttempts = 0;
       
@@ -298,6 +378,11 @@ class DeviceController {
     return new Promise((resolve, reject) => {
       if (!this.isConnected) {
         reject({ success: false, message: 'Device not connected' });
+        return;
+      }
+
+      if (!this.port) {
+        reject({ success: false, message: 'Port is not initialized' });
         return;
       }
 
@@ -339,6 +424,12 @@ class DeviceController {
   public cleanup(): void {
     console.log('Cleaning up device controller resources...');
     
+    // Clear device check interval
+    if (this.deviceCheckInterval !== null) {
+      clearInterval(this.deviceCheckInterval);
+      this.deviceCheckInterval = null;
+    }
+    
     // Clear any reconnection timer
     if (this.reconnectTimer !== null) {
       clearTimeout(this.reconnectTimer);
@@ -375,11 +466,13 @@ app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
+// Initialize the device controller with the path to the USB device
+// The controller will automatically try to connect and reconnect as needed
 const device = new DeviceController('/dev/ttyACM0');
 
-device.connect().catch((err) => {
-  console.error('Failed to connect to device:', err);
-});
+// No need to call connect() here as the controller handles this internally
+// and will keep trying to reconnect if the device is not available
+console.log(`Device controller initialized for ${'/dev/ttyACM0'}`);
 
 // Helper function to send commands with retry logic
 async function sendCommandWithRetry(device: DeviceController, command: string, maxRetries = 3): Promise<SerialResponse> {
