@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recycling System Control</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 15px 20px;
+            font-size: 18px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(1px);
+        }
+        .door-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .door-buttons button {
+            flex: 1;
+        }
+        #open-door {
+            background-color: #27ae60;
+            color: white;
+        }
+        #open-door:hover {
+            background-color: #2ecc71;
+        }
+        #close-door {
+            background-color: #c0392b;
+            color: white;
+        }
+        #close-door:hover {
+            background-color: #e74c3c;
+        }
+        .trash-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        #plastic {
+            background-color: #3498db;
+            color: white;
+        }
+        #plastic:hover {
+            background-color: #2980b9;
+        }
+        #metal {
+            background-color: #95a5a6;
+            color: white;
+        }
+        #metal:hover {
+            background-color: #7f8c8d;
+        }
+        #other {
+            background-color: #f39c12;
+            color: white;
+        }
+        #other:hover {
+            background-color: #d35400;
+        }
+        #response {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            min-height: 100px;
+            margin-top: 20px;
+        }
+        .response-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Recycling System Control</h1>
+    
+    <div class="button-container">
+        <div class="door-buttons">
+            <button id="open-door">Open Door</button>
+            <button id="close-door">Close Door</button>
+        </div>
+        
+        <div class="trash-buttons">
+            <button id="plastic">Plastic</button>
+            <button id="metal">Metal</button>
+            <button id="other">Other</button>
+        </div>
+    </div>
+    
+    <div id="response">
+        <div class="response-title">Response:</div>
+        <div id="response-content">No action taken yet</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get all buttons
+            const openDoorBtn = document.getElementById('open-door');
+            const closeDoorBtn = document.getElementById('close-door');
+            const plasticBtn = document.getElementById('plastic');
+            const metalBtn = document.getElementById('metal');
+            const otherBtn = document.getElementById('other');
+            const responseContent = document.getElementById('response-content');
+            
+            // Function to make API calls
+            async function callApi(endpoint) {
+                responseContent.textContent = `Sending request to ${endpoint}...`;
+                
+                try {
+                    const response = await fetch(`/${endpoint}`);
+                    const data = await response.json();
+                    
+                    // Display the response
+                    responseContent.innerHTML = `
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } catch (error) {
+                    responseContent.textContent = `Error: ${error.message}`;
+                }
+            }
+            
+            // Add event listeners to buttons
+            openDoorBtn.addEventListener('click', () => callApi('open_door'));
+            closeDoorBtn.addEventListener('click', () => callApi('close_door'));
+            plasticBtn.addEventListener('click', () => callApi('plastic'));
+            metalBtn.addEventListener('click', () => callApi('metal'));
+            otherBtn.addEventListener('click', () => callApi('other'));
+        });
+    </script>
+</body>
+</html>
